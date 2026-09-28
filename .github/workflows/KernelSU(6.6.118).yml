@@ -12,10 +12,10 @@ on:
   workflow_dispatch:
     inputs:
       ksu_type:
-        description: 'KernelSU分支(ReSukiSU/SukiSU Ultra/KernelSU Next/KSU(原版)/无内置KSU,默认ReSukiSU)'
+        description: 'KernelSU分支(ksu=原版KernelSU / none=不内置KernelSU到内核)'
         required: true
         type: choice
-        default: 'resukisu'
+        default: 'ksu'
         options:
           - 'ksu'
           - 'none'
@@ -269,6 +269,8 @@ jobs:
             sed -i "s/DKSU_VERSION=16/DKSU_VERSION=${KSU_VERSION}/" kernel/Kbuild
           else
             echo "已选择无内置KernelSU模式，跳过KernelSU配置..."
+            echo "KSUVER=0" >> $GITHUB_ENV
+            echo "ksuver=0" >> $GITHUB_OUTPUT
           fi
 
       - name: 应用 KernelSU & SUSFS 补丁
@@ -327,7 +329,7 @@ jobs:
           patch -p1 -F 3 < lz4kd.patch || true
           
       - name: 添加SUSFS 配置项
-        if: inputs.susfs_enable
+        if: inputs.susfs_enable && inputs.ksu_type != 'none'
         run: |
           cd kernel_workspace
           echo "CONFIG_KSU_SUSFS=y" >> ./common/arch/arm64/configs/gki_defconfig
@@ -349,9 +351,13 @@ jobs:
       - name: 添加 KSU & 其他配置项
         run: |
           cd kernel_workspace
-          echo "CONFIG_KSU=y" >> ./common/arch/arm64/configs/gki_defconfig
-          if [[ "${{ github.event.inputs.susfs_enable }}" == "false" ]]; then
-            echo "CONFIG_KSU_SUSFS=n" >> ./common/arch/arm64/configs/gki_defconfig
+          if [[ "${{ github.event.inputs.ksu_type }}" != "none" ]]; then
+            echo "CONFIG_KSU=y" >> ./common/arch/arm64/configs/gki_defconfig
+            if [[ "${{ github.event.inputs.susfs_enable }}" == "false" ]]; then
+              echo "CONFIG_KSU_SUSFS=n" >> ./common/arch/arm64/configs/gki_defconfig
+            fi
+          else
+            echo "已选择无内置KernelSU，跳过 CONFIG_KSU 相关配置"
           fi
           #添加对 Mountify (backslashxx/mountify) 模块的支持
           echo "CONFIG_TMPFS_XATTR=y" >> ./common/arch/arm64/configs/gki_defconfig
