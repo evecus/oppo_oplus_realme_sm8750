@@ -1,4 +1,4 @@
-name: (天玑特供) 6.6.118 欧加真OKI内核快速构建
+name: (天玑特供) 6.6.118 欧加真OKI内核快速构建 kernelsu
 
 env:
   TZ: Asia/Shanghai
